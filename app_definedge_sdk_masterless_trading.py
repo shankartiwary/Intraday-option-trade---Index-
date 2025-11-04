@@ -6,7 +6,7 @@ import streamlit as st
 from queue import Queue
 
 # Definedge SDK
-from integrate import ConnectToIntegrate, IntegrateWebSocket, IntegrateOrders
+from pyintegrate import ConnectToIntegrate, IntegrateWebSocket, IntegrateOrders
 
 st.set_page_config(page_title="P&F Options (Definedge SDK)", layout="wide")
 st.title("NIFTY/BANKNIFTY P&F Options — Realtime Features & Trading (Definedge SDK)")
