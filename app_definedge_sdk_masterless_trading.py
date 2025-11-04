@@ -366,14 +366,15 @@ def build_feature_frame(df_all: pd.DataFrame):
     if df_all.empty: return df_all
     df_all = df_all.copy()
     df_all["ts"] = pd.to_datetime(df_all["ts"])
-    ohlc = (df_all.set_index("ts")
-            .groupby(["symbol","strike","opt_type","expiry"])
-            .resample("1min")
-            .agg(ltp=("ltp","last"),
-                 high=("high","max"),
-                 low=("low","min"),
-                 volume=("volume","sum"),
-                 oi=("oi","last"))
+    # The original resampling logic was dropping pre-aggregated historical data.
+    # This new approach uses groupby with pd.Grouper to correctly aggregate live ticks
+    # into 1-minute bars while preserving the already-aggregated historical bars.
+    ohlc = (df_all.groupby(["symbol", "strike", "opt_type", "expiry", pd.Grouper(key="ts", freq="1min")])
+            .agg(ltp=("ltp", "last"),
+                 high=("high", "max"),
+                 low=("low", "min"),
+                 volume=("volume", "sum"),
+                 oi=("oi", "last"))
             .dropna(subset=["ltp"])
             .reset_index())
     ohlc["high"] = ohlc["high"].fillna(ohlc["ltp"])
