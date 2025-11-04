@@ -548,8 +548,8 @@ if bf_now and ss.is_connected:
     end = prev.replace(hour=15, minute=30, second=0, microsecond=0)
 
     # choose tokens
+    st.info("Backfilling active contracts for the selected index, ignoring the expiry date choice to ensure data availability.")
     m = ss.master_df[ss.master_df["symbol_base"]==index_choice].copy()
-    if expiry_choice != "All": m = m[m["expiry"]==expiry_choice]
     use = m.head(60).copy()
 
     landed = 0
@@ -640,7 +640,6 @@ if bf_toggle and ss.is_connected and ss.tick_df.empty:
     start = prev.replace(hour=9, minute=15, second=0, microsecond=0)
     end = prev.replace(hour=15, minute=30, second=0, microsecond=0)
     m = ss.master_df[ss.master_df["symbol_base"]==index_choice].copy()
-    if expiry_choice != "All": m = m[m["expiry"]==expiry_choice]
     use = m.head(40).copy()
     landed = 0
     all_history = []
