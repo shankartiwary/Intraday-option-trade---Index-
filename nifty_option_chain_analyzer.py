@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from nsepython import nse_optionchain_scrapper
+from nsepython import nse_option_chain
 import time
 
 st.set_page_config(layout="wide")
@@ -10,7 +10,7 @@ def fetch_option_chain_data():
     Fetches Nifty 50 option chain data using the nsepython library.
     """
     try:
-        data = nse_optionchain_scrapper("NIFTY")
+        data = nse_option_chain("NIFTY")
         return data
     except Exception as e:
         st.error(f"Error fetching data from NSE: {e}")
