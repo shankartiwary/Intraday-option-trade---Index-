@@ -7,7 +7,7 @@ from queue import Queue
 
 # Definedge SDK
 # Note: The package is installed as 'pyintegrate', but the module is imported as 'integrate'.
-from integrate import ConnectToIntegrate, IntegrateWebSocket, IntegrateOrders
+from integrate import ConnectToIntegrate, IntegrateWebSocket, IntegrateOrders, IntegrateData
 
 st.set_page_config(page_title="P&F Options (Definedge SDK)", layout="wide")
 st.title("NIFTY/BANKNIFTY P&F Options — Realtime Features & Trading (Definedge SDK)")
@@ -289,46 +289,23 @@ def _rest_history_csv(session_key: str, segment: str, token: str, timeframe: str
     return pd.DataFrame()
 
 # ----------------- SDK Historical helper -----------------
-def fetch_prev_session_1min_sdk(conn, token: str, start: dt.datetime, end: dt.datetime) -> pd.DataFrame:
-    objs = [conn]
-    for name in dir(conn):
-        if any(k in name.lower() for k in ["market","history","hist","ohlc","data"]):
-            try: objs.append(getattr(conn, name))
-            except Exception: pass
-    method_names = ["get_historical_data","historical_data","get_ohlc","get_historical","get_historical_ohlc"]
-    param_maps = [
-        {"exchange": getattr(conn, "EXCHANGE_TYPE_NFO", "NFO"), "token": token, "interval": "1minute",
-         "from_date": start, "to_date": end},
-        {"exchange": getattr(conn, "EXCHANGE_TYPE_NFO", "NFO"), "token": token, "timeframe": "1minute",
-         "from_date": start, "to_date": end},
-        {"exchange": getattr(conn, "EXCHANGE_TYPE_NFO", "NFO"), "token": token, "interval": "1minute",
-         "from": start, "to": end},
-        {"exchange": getattr(conn, "EXCHANGE_TYPE_NFO", "NFO"), "token": token, "timeframe": "1minute",
-         "_from": start, "to": end},
-        {"exchange": getattr(conn, "EXCHANGE_TYPE_NFO", "NFO"), "instrument_token": token, "interval": "1minute",
-         "from_date": start, "to_date": end},
-    ]
-    for obj in objs:
-        for mname in method_names:
-            fn = getattr(obj, mname, None)
-            if not callable(fn): continue
-            for params in param_maps:
-                try:
-                    data = fn(**params)
-                    df = normalize_hist_df(data)
-                    if df is not None and not df.empty: return df
-                except TypeError:
-                    try:
-                        p2 = dict(params)
-                        for k in ["from_date","to_date","from","_from","to"]:
-                            if isinstance(p2.get(k), dt.datetime):
-                                p2[k] = p2[k].strftime("%Y-%m-%d %H:%M:%S")
-                        data = fn(**p2)
-                        df = normalize_hist_df(data)
-                        if df is not None and not df.empty: return df
-                    except Exception: continue
-                except Exception: continue
-    return pd.DataFrame()
+def fetch_prev_session_1min_sdk(conn, tradingsymbol: str, start: dt.datetime, end: dt.datetime) -> pd.DataFrame:
+    """
+    Fetches 1-minute historical data using the official SDK method.
+    """
+    try:
+        ic = IntegrateData(conn)
+        history = ic.historical_data(
+            exchange=conn.EXCHANGE_TYPE_NFO,
+            trading_symbol=tradingsymbol,
+            timeframe=conn.TIMEFRAME_TYPE_MIN,
+            start=start,
+            end=end,
+        )
+        data_list = list(history)
+        return normalize_hist_df(data_list)
+    except Exception:
+        return pd.DataFrame()
 
 def normalize_hist_df(x):
     if x is None: return pd.DataFrame()
@@ -555,11 +532,11 @@ if bf_now and ss.is_connected:
     landed = 0
     all_history = []
     for r in use.itertuples(index=False):
-        dfh = fetch_prev_session_1min_sdk(ss.conn, str(r.token), start, end)
+        dfh = fetch_prev_session_1min_sdk(ss.conn, str(r.tradingsymbol), start, end)
         if dfh is None or dfh.empty:
             sess_key = _extract_session_key(ss.conn)
             if sess_key:
-                dfh = _rest_history_csv(sess_key, "NFO", str(r.token), "minute", start, end)
+                dfh = _rest_history_csv(sess_key, "NFO", str(r.token), "minute", start, end) # REST fallback still needs token
         if dfh is None or dfh.empty:
             continue
 
@@ -644,11 +621,11 @@ if bf_toggle and ss.is_connected and ss.tick_df.empty:
     landed = 0
     all_history = []
     for r in use.itertuples(index=False):
-        dfh = fetch_prev_session_1min_sdk(ss.conn, str(r.token), start, end)
+        dfh = fetch_prev_session_1min_sdk(ss.conn, str(r.tradingsymbol), start, end)
         if dfh is None or dfh.empty:
             sess_key = _extract_session_key(ss.conn)
             if sess_key:
-                dfh = _rest_history_csv(sess_key, "NFO", str(r.token), "minute", start, end)
+                dfh = _rest_history_csv(sess_key, "NFO", str(r.token), "minute", start, end) # REST fallback still needs token
         if dfh is None or dfh.empty:
             continue
 
