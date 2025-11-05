@@ -9,7 +9,8 @@ def fetch_option_chain_data():
     """
     Fetches Nifty 50 option chain data from the NSE website.
     """
-    url = "https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY"
+    base_url = "https://www.nseindia.com/"
+    api_url = "https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY"
     headers = {
         'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36',
         'accept-language': 'en,gu;q=0.9,hi;q=0.8',
@@ -17,9 +18,8 @@ def fetch_option_chain_data():
     }
     try:
         session = requests.Session()
-        request = session.get(url, headers=headers, timeout=5)
-        cookies = dict(request.cookies)
-        response = session.get(url, headers=headers, timeout=5, cookies=cookies)
+        session.get(base_url, headers=headers, timeout=5)
+        response = session.get(api_url, headers=headers, timeout=5)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
