@@ -9,7 +9,6 @@ def fetch_option_chain_data():
     """
     Fetches Nifty 50 option chain data from the NSE website.
     """
-    url = 'https://www1.nseindia.com/live_market/dynaContent/live_watch/option_chain/optionKeys.jsp?symbol=NIFTY&date=-'
     base_url = "https://www.nseindia.com/option-chain"
     api_url = "https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY"
     headers = {

@@ -1,7 +1,4 @@
 pyintegrate==1.2.0
 streamlit
 pandas
-requests
-beautifulsoup4
-lxml
 httpx
