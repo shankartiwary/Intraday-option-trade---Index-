@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import httpx
+import requests
 import time
 
 st.set_page_config(layout="wide")
@@ -9,20 +9,20 @@ def fetch_option_chain_data():
     """
     Fetches Nifty 50 option chain data from the NSE website.
     """
-    base_url = "https://www.nseindia.com/option-chain"
-    api_url = "https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY"
+    url = 'https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY'
     headers = {
         'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36',
         'accept-language': 'en,gu;q=0.9,hi;q=0.8',
         'accept-encoding': 'gzip, deflate, br'
     }
     try:
-        with httpx.Client(http2=True) as client:
-            client.get(base_url, headers=headers)
-            response = client.get(api_url, headers=headers)
-            response.raise_for_status()
-            return response.json()
-    except httpx.RequestError as e:
+        session = requests.Session()
+        request = session.get("https://www.nseindia.com", headers=headers, timeout=5)
+        cookies = dict(request.cookies)
+        response = session.get(url, headers=headers, timeout=5, cookies=cookies)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
         st.error(f"Error fetching data from NSE: {e}")
         return None
 
