@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 import time
+from bs4 import BeautifulSoup
 
 st.set_page_config(layout="wide")
 
@@ -9,7 +10,7 @@ def fetch_option_chain_data():
     """
     Fetches Nifty 50 option chain data from the NSE website.
     """
-    url = "https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY"
+    url = 'https://www1.nseindia.com/live_market/dynaContent/live_watch/option_chain/optionKeys.jsp?symbol=NIFTY&date=-'
     headers = {
         'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36',
         'accept-language': 'en,gu;q=0.9,hi;q=0.8',
@@ -17,11 +18,55 @@ def fetch_option_chain_data():
     }
     try:
         session = requests.Session()
-        request = session.get("https://www.nseindia.com/option-chain", headers=headers, timeout=5)
+        request = session.get(url, headers=headers, timeout=5)
         cookies = dict(request.cookies)
         response = session.get(url, headers=headers, timeout=5, cookies=cookies)
         response.raise_for_status()
-        return response.json()
+        soup = BeautifulSoup(response.text, 'lxml')
+        table = soup.find('table', {'id': 'octable'})
+        rows = table.find_all('tr')
+        data = []
+        for row in rows[2:]:
+            cells = row.find_all('td')
+            if len(cells) > 21:
+                data.append({
+                    'CE_OI': cells[1].text.strip(),
+                    'CE_CHNG_IN_OI': cells[2].text.strip(),
+                    'CE_VOLUME': cells[3].text.strip(),
+                    'CE_LTP': cells[5].text.strip(),
+                    'CE_CHNG': cells[6].text.strip(),
+                    'STRIKE_PRICE': cells[11].text.strip(),
+                    'PE_CHNG': cells[16].text.strip(),
+                    'PE_LTP': cells[17].text.strip(),
+                    'PE_VOLUME': cells[19].text.strip(),
+                    'PE_CHNG_IN_OI': cells[20].text.strip(),
+                    'PE_OI': cells[21].text.strip(),
+                })
+        records = []
+        for item in data:
+            records.append({
+                'strikePrice': float(item['STRIKE_PRICE'].replace(',', '')),
+                'CE': {
+                    'openInterest': float(item['CE_OI'].replace(',', '')),
+                    'changeinOpenInterest': float(item['CE_CHNG_IN_OI'].replace(',', '')),
+                    'totalTradedVolume': float(item['CE_VOLUME'].replace(',', '')),
+                    'lastPrice': float(item['CE_LTP'].replace(',', '')),
+                    'change': float(item['CE_CHNG'].replace(',', '')),
+                },
+                'PE': {
+                    'openInterest': float(item['PE_OI'].replace(',', '')),
+                    'changeinOpenInterest': float(item['PE_CHNG_IN_OI'].replace(',', '')),
+                    'totalTradedVolume': float(item['PE_VOLUME'].replace(',', '')),
+                    'lastPrice': float(item['PE_LTP'].replace(',', '')),
+                    'change': float(item['PE_CHNG'].replace(',', '')),
+                }
+            })
+
+        # Now I need to find the spot price. It's in a span with id="spotPrice"
+        spot_price_span = soup.find('span', {'id': 'spotPrice'})
+        spot_price = float(spot_price_span.text.replace(',', '')) if spot_price_span else 0
+
+        return {'records': {'data': records, 'underlyingValue': spot_price}}
     except requests.exceptions.RequestException as e:
         st.error(f"Error fetching data from NSE: {e}")
         return None
